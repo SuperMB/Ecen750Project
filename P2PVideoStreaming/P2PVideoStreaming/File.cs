@@ -31,7 +31,7 @@ namespace P2PVideoStreaming
             if (fileSection == null)
                 return;
 
-            if(FileSections[fileSection.SectionNumber] == null)
+            if (FileSections[fileSection.SectionNumber] == null)
                 FileSections[fileSection.SectionNumber] = fileSection;
 
             if (fileSection.SectionNumber == LowestSectionNotReceived)

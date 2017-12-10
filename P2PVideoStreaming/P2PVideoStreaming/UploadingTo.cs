@@ -22,6 +22,9 @@ namespace P2PVideoStreaming
 
         public static implicit operator DownloadingFrom(UploadingTo uploadingTo)
         {
+            if (uploadingTo == null)
+                return null; 
+
             return new DownloadingFrom
             {
                 FileSection = uploadingTo.FileSection,
