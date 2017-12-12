@@ -43,6 +43,40 @@ namespace P2PVideoStreaming
             }
         }
 
+        public double AverageBalance()
+        {
+            if (Size == 0)
+                return 0;
+
+            double balance = 0;
+            foreach (User user in Users)
+                balance += user.Balance;
+
+            return balance / Users.Count;
+        }
+
+        public bool ValidateContactLists()
+        {
+            foreach (User user in Users)
+                foreach (User contact in user.ContactList)
+                    if (contact.UserGroup != this)
+                        return false;
+
+            return true;
+        }
+
+        public double AverageUploadBandwidth()
+        {
+            if (Size == 0)
+                return 0;
+
+            double uploadBandwidth = 0;
+            foreach (User user in Users)
+                uploadBandwidth += user.UploadBandwidth;
+
+            return uploadBandwidth / Size / Functions.TimePerSlot;
+        }
+
         public double VideoRate { get; set; }
         public List<User> Users { get; set; }
         public double DataUploadedThisTimeSlot { get; set; }

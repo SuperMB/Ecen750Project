@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -9,7 +10,7 @@ namespace P2PVideoStreaming
     class Program
     {
         private static int _numberOfUsers = Functions.NumberOfUsers;
-        private static double _videoLength = 120;
+        private static double _videoLength = 1200;
         private static int _numberOfSections = (int)(_videoLength / Functions.TimePerSlot);
         private static User _server;
         private static bool _finished;
@@ -61,26 +62,28 @@ namespace P2PVideoStreaming
             while(a != "y")
                 a = Console.ReadLine();
         }
-
+        
         private static void PrintUserGroupTotals()
         {
             foreach(UserGroup userGroup in Functions.UserGroups)
             {
-                Console.Out.WriteLine($"User Group {userGroup.VideoRate} Count: {userGroup.Users.Count}");
+                Console.Out.WriteLine($"User Group {userGroup.VideoRate} Count: {userGroup.Users.Count}, AverageUploadBandwidth: {userGroup.AverageUploadBandwidth()}, Balance: {userGroup.AverageBalance()}");
             }
+            Console.Out.WriteLine();
         }
 
         private static void MakeUsers()
         {
             Functions.Users = new User[_numberOfUsers];
-            int sections = 4;
+            int sections = 2;
             for(int i = 0; i < sections; i++)
                 for (int j = 0; j < Functions.Users.Length / sections; j++)
                 {
                     int position = i * Functions.Users.Length / sections + j;
                     Functions.Users[position] = new User(
                         position,
-                        3 * Functions.TimePerSlot,
+                        5 * Functions.TimePerSlot,
+                        //(2 + i * 6) * Functions.TimePerSlot,
                         15 * Functions.TimePerSlot,
                         -1// Gets reset later
                         )
@@ -136,10 +139,25 @@ namespace P2PVideoStreaming
                 Functions.TimesFileServed[userGroup] = new int[_numberOfSections];
         }
 
+        private static bool ValidateUserGroups()
+        {
+            foreach (UserGroup userGroup in Functions.UserGroups)
+                if (!userGroup.ValidateContactLists())
+                    return false;
+
+            return true;
+        }
+
         private static void DistributeFile()
         {
-            while (!Finished())
+            while (!(_timeSlot == .5 * _videoLength))//Finished())
             {
+                if (_timeSlot % 50 == 0)
+                {
+                    //Console.Out.WriteLine(ValidateUserGroups());
+                    PrintUserGroupTotals();
+                }
+
                 User[] randomizedUsers = Functions.Users.OrderBy(user => Functions.Random.Next()).ToArray();
                 foreach (User user in randomizedUsers)
                     user.ExecuteTimeSlotDownloads();
@@ -167,6 +185,8 @@ namespace P2PVideoStreaming
                     userGroup.DataUploadedThisTimeSlot = 0;
                 foreach (User user in randomizedUsers)
                     AdjustUser(user);
+                Functions.GroupHasBeenLowered = false;
+                Functions.GroupHasBeenRaised = false;
 
                 if (_timeSlot % (10 / Functions.TimePerSlot) == 0 && _timeSlot > 0)
                     Functions.RandomizeContactLists();
@@ -175,10 +195,35 @@ namespace P2PVideoStreaming
 
         private static void AdjustUser(User user)
         {
-            if (user.ConsecutiveNegativeBalance >= 20)
-                Functions.LowerUser(user);
-            else if (user.ConsecutivePositiveBalance >= 20)
-                Functions.RaiseUser(user);
+            //return;
+
+            //if (user.ConsecutiveNegativeBalance >= 20)
+            if (user.Balance < -5)
+            {
+                Functions.LowerGroup(user);
+                //Functions.LowerUser(user);
+                PrintUserGroupTotalsToFile();
+            }
+            else if (user.Balance >= 10)
+            {
+                Functions.RaiseGroup(user);
+                //Functions.RaiseUser(user);
+                PrintUserGroupTotalsToFile();
+            }
+        }
+
+        static StreamWriter File;
+        private static void PrintUserGroupTotalsToFile()
+        {
+            return;
+            if (File == null)
+                File = new StreamWriter("Output.txt");
+
+            foreach (UserGroup userGroup in Functions.UserGroups)
+            {
+                File.WriteLine($"User Group {userGroup.VideoRate} Count: {userGroup.Users.Count}");
+            }
+            File.WriteLine();
         }
 
         private static bool Finished()

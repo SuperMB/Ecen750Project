@@ -12,11 +12,50 @@ namespace P2PVideoStreaming
         {
             Random = new Random(4);
             ServerConsumedBandwidth = new Dictionary<UserGroup, double>();
+            GroupHasBeenLowered = false;
+            GroupHasBeenRaised = false;
         }
 
         public static double BandwidthNeededPerSection(double videoRate)
         {
             return videoRate * TimePerSlot;
+        }
+
+        public static bool GroupHasBeenLowered { get; set; }
+        public static void LowerGroup(User user)
+        {
+            if (true) //!GroupHasBeenLowered)
+            {
+                user.UserGroup.Users.Sort((user1, user2) =>
+                {
+                    return user1.Balance.CompareTo(user2.Balance);
+                });
+
+                UserGroup userGroup = user.UserGroup;
+
+                int amountToLower = userGroup.Size > GroupSizeToDrop ? GroupSizeToDrop : userGroup.Size;
+                for (int i = 0; i < amountToLower; i++)
+                    LowerUser(userGroup.Users[0]);
+            }
+            GroupHasBeenLowered = true;
+        }
+        public static bool GroupHasBeenRaised { get; set; }
+        public static void RaiseGroup(User user)
+        {
+            if (true) //!GroupHasBeenRaised)
+            {
+                user.UserGroup.Users.Sort((user1, user2) =>
+                {
+                    return user2.Balance.CompareTo(user1.Balance);
+                });
+
+                UserGroup userGroup = user.UserGroup;
+
+                int amountToRaise = userGroup.Size > GroupSizeToDrop ? GroupSizeToDrop : userGroup.Size;
+                for (int i = 0; i < amountToRaise; i++)
+                    RaiseUser(userGroup.Users[0]);
+            }
+            GroupHasBeenRaised = true;
         }
 
         public static void LowerUser(User user)
@@ -129,7 +168,7 @@ namespace P2PVideoStreaming
         public static List<int>[] TimesFileServedList { get; set; }
         public const int MaxServerDistributionPerSection = 18;// Math.Ceiling(Math.Log(NumberOfUsers) / Math.Log(2));//10;
         public const int NumberOfUsers = 500;
-        public const int ContactListSize = 15;
+        public const int ContactListSize = 40;
         public static List<UserGroup> UserGroups;
         public static double[] VideoRates = new double[]
         {
@@ -141,5 +180,7 @@ namespace P2PVideoStreaming
         };
         public static Dictionary<UserGroup, double> ServerConsumedBandwidth { get; set; }
         public static User[] Users;
+        public const double SamplesToAverage = 10;
+        public const int GroupSizeToDrop = ContactListSize;
     }
 }
