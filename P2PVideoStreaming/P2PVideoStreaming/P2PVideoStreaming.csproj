@@ -49,6 +49,7 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SectionWeight.cs" />
+    <Compile Include="Network.cs" />
     <Compile Include="UploadingTo.cs" />
     <Compile Include="User.cs" />
     <Compile Include="UserGroup.cs" />

@@ -8,10 +8,11 @@ namespace P2PVideoStreaming
 {
     class UserGroup
     {
-        public UserGroup(double videoRate)
+        public UserGroup(double videoRate, Network network)
         {
             VideoRate = videoRate;
             Users = new List<User>();
+            Network = network;
         }
 
         public double AddUser(User user)
@@ -31,7 +32,7 @@ namespace P2PVideoStreaming
                 if (userInGroup.ContactList.Contains(user))
                 {
                     userInGroup.ContactList.Remove(user);
-                    Functions.AddRandomContact(userInGroup);
+                    Network.AddRandomContact(userInGroup);
                 }
         }
 
@@ -79,6 +80,7 @@ namespace P2PVideoStreaming
 
         public double VideoRate { get; set; }
         public List<User> Users { get; set; }
+        public Network Network { get; private set; }
         public double DataUploadedThisTimeSlot { get; set; }
     }
 }

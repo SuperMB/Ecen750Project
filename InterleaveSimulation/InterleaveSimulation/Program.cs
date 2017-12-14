@@ -10,16 +10,13 @@ namespace InterleaveSimulation
     {
         static void Main(string[] args)
         {
-            Network network = new Network();
-
-            network.MakeUsers();
-            network.CreateContactLists();
-            network.CreateServer();
-
-            network.DistributeFile();
-
-            Console.Out.WriteLine("Finished");
-            Console.Out.WriteLine($"Final Time Slot: {network.TimeSlot}.");
+            for (int i = 2; i <= 10; i++)
+            {
+                Console.WriteLine($"i: {i}");
+                Network network = new Network(i);
+                network.RunSimulation();
+                Console.WriteLine();
+            }
 
             Console.Read();
         }

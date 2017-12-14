@@ -8,7 +8,7 @@ namespace P2PVideoStreaming
 {
     class User
     {
-        public User(int userNumber, double uploadRate, double downloadRate, double videoRate)
+        public User(int userNumber, double uploadRate, double downloadRate, double videoRate, Network network)
         {
             UserNumber = userNumber;
             UploadBandwidth = uploadRate;
@@ -35,6 +35,8 @@ namespace P2PVideoStreaming
             FreshBalance();
             _sectionsToInsert = new List<FileSection>();
             _downloadSectionsInProgress = new Dictionary<User, DownloadingFrom>();
+
+            Network = network;
             //_uploadSectionsInProgress = new Dictionary<User, UploadingTo>();
         }
 
@@ -72,7 +74,7 @@ namespace P2PVideoStreaming
             List<SectionWeight> neededSections = new List<SectionWeight>();
             int nextWeight = 1;
             int weightSum = 0;
-            for(int i = end - 1; i >= start; i--)
+            for (int i = end - 1; i >= start; i--)
                 if (File.FileSections[i] == null && !previousDownloadSectionsInProgress.Contains(i))
                 {
                     neededSections.Add(new SectionWeight
@@ -85,9 +87,9 @@ namespace P2PVideoStreaming
                 }
             for (int i = 1; i < neededSections.Count; i++)
                 neededSections[i].Weight += neededSections[i - 1].Weight;
-            
+
             List<int> sectionsDownloading = new List<int>();
-            while(ConsumedDownloadBandwidth < DownloadBandwidth && neededSections.Count > 0)// && Functions.Server.AvailableUploadBandwidth > 0)
+            while (ConsumedDownloadBandwidth < DownloadBandwidth && neededSections.Count > 0)// && Functions.Server.AvailableUploadBandwidth > 0)
             {
                 //generate a weight and find the section according to the range the weight falls into
                 int weight = Functions.Random.Next(weightSum + 1);
@@ -106,7 +108,7 @@ namespace P2PVideoStreaming
                     for (int i = position + 1; i < neededSections.Count; i++)
                         neededSections[i].Weight -= amountToSubtract;
                 neededSections.RemoveAt(position);
-                if(neededSections.Count > 0)
+                if (neededSections.Count > 0)
                     weightSum = (int)neededSections.Last().Weight;
 
                 //Get contacts that have the section, and sort them based on available bandwidth
@@ -160,10 +162,10 @@ namespace P2PVideoStreaming
 
         private void DownloadSectionFromServer(int section)
         {
-            double serverConsumedUploadBandwidth = Functions.Server.ConsumedUploadBandwidth;
-            DownloadSectionFromContact(Functions.Server, section, 1);
-            serverConsumedUploadBandwidth = Functions.Server.ConsumedUploadBandwidth - serverConsumedUploadBandwidth;
-            Functions.ServerConsumedBandwidth[UserGroup] += serverConsumedUploadBandwidth;
+            double serverConsumedUploadBandwidth = Network.Server.ConsumedUploadBandwidth;
+            DownloadSectionFromContact(Network.Server, section, 1);
+            serverConsumedUploadBandwidth = Network.Server.ConsumedUploadBandwidth - serverConsumedUploadBandwidth;
+            Network.ServerConsumedBandwidth[UserGroup] += serverConsumedUploadBandwidth;
         }
 
         private double DownloadSectionFromContact(User contactToDownloadFrom, int section, double percentage)
@@ -234,13 +236,13 @@ namespace P2PVideoStreaming
             double bandwidthNeeded = Functions.BandwidthNeededPerSection(videoRate) * percentage;
             bool uploadBottleneck = bandwidthNeeded > AvailableUploadBandwidth;
             bool downloadBottleneck = bandwidthNeeded > user.AvailableDownloadBandwidth;
-            if(uploadBottleneck && downloadBottleneck)
+            if (uploadBottleneck && downloadBottleneck)
             {
                 uploadBottleneck = AvailableUploadBandwidth <= user.AvailableDownloadBandwidth;
                 downloadBottleneck = !uploadBottleneck;
             }
 
-            if(uploadBottleneck || downloadBottleneck)
+            if (uploadBottleneck || downloadBottleneck)
             {
                 double amountUploaded = uploadBottleneck ? AvailableUploadBandwidth : user.AvailableDownloadBandwidth;
                 ConsumedUploadBandwidth += amountUploaded;
@@ -259,7 +261,7 @@ namespace P2PVideoStreaming
                 if (UserNumber < 0)
                 {
                     //Functions.TimesFileServedList[section].Add(user.UserNumber);
-                    Functions.TimesFileServed[user.UserGroup][section]++;
+                    Network.TimesFileServed[user.UserGroup][section]++;
                 }
 
                 return new UploadingTo
@@ -281,7 +283,7 @@ namespace P2PVideoStreaming
 
             AmountDownloaded += ConsumedDownloadBandwidth;
             AmountUploaded += ConsumedUploadBandwidth;
-            if (_uploadList.Count >= Functions.SamplesToAverage)
+            if (_uploadList.Count >= Network.SamplesToAverage)
                 _uploadList.RemoveAt(0);
             _uploadList.Add(ConsumedUploadBandwidth);
 
@@ -291,14 +293,14 @@ namespace P2PVideoStreaming
 
         public void PlayTimeSlot()
         {
-            if(_buffering)
-                if(FinishedBuffering())
+            if (_buffering)
+                if (FinishedBuffering())
                     _buffering = false;
-                else 
+                else
                     TimeBuffering += Functions.TimePerSlot;
 
             if (!PlayBackFinished & !_buffering)
-                if(File.HasSection(VideoPosition))
+                if (File.HasSection(VideoPosition))
                 {
                     VideoPosition++;
                     TimePlayed += Functions.TimePerSlot;
@@ -312,7 +314,7 @@ namespace P2PVideoStreaming
         public bool FinishedBuffering()
         {
             if (!_buffering)
-                return true; 
+                return true;
 
             for (int i = 0; i < LoadAmountTillPlay / Functions.TimePerSlot; i++)
                 if (!File.HasSection(i))
@@ -323,18 +325,18 @@ namespace P2PVideoStreaming
 
         public void UpdateBalance()
         {
-            if (this != Functions.Server && _uploadList.Count >= Functions.SamplesToAverage && !PlayBackFinished)
+            if (this != Network.Server && _uploadList.Count >= Network.SamplesToAverage && !PlayBackFinished)
             {
                 //Balance += /*2 * Math.Ceiling(Math.Log(UserGroup.Size) / Math.Log(2)) * VideoRate * Functions.TimePerSlot / UserGroup.Size*/ - Functions.ServerConsumedBandwidth[UserGroup] / UserGroup.Size + UserGroup.DataUploadedThisTimeSlot / UserGroup.Size;// - ConsumedDownloadBandwidth; // * UploadBandwidth / DownloadBandwidth;
                 //Balance += UserGroup.DataUploadedThisTimeSlot / UserGroup.Size - Functions.ServerConsumedBandwidth[UserGroup] == 0 ? 0 : Math.Log(Functions.ServerConsumedBandwidth[UserGroup]);// / UserGroup.Size;
                 //Balance += .85*ConsumedUploadBandwidth - AdjustedLog(Functions.ServerConsumedBandwidth[UserGroup] + 1) / (AdjustedLog(UserGroup.Size) + 1);// / UserGroup.Size;
                 //Balance += 1.3 * ((AdjustedLog(UserGroup.DataUploadedThisTimeSlot) - AdjustedLog(Math.Sqrt(VideoRate) * Functions.ServerConsumedBandwidth[UserGroup])) / Math.Sqrt(UserGroup.Size));
-                double weight = VideoRate * .75; // 1.2 * Math.Sqrt(VideoRate);
+                double weight = VideoRate * .5; // 1.2 * Math.Sqrt(VideoRate);
                 //if (weight < 1)
                 //    weight = 1;
-                double value = (SamplesAverage() - weight * Functions.ServerConsumedBandwidth[UserGroup] / UserGroup.Size);
+                double value = (SamplesAverage() - weight * Network.ServerConsumedBandwidth[UserGroup] / UserGroup.Size);
                 double negative = 1;
-                if(value < 0)
+                if (value < 0)
                 {
                     negative = -1;
                     value = Math.Sqrt(-value);
@@ -349,7 +351,7 @@ namespace P2PVideoStreaming
                 if (Balance > 0)
                     ConsecutivePositiveBalance++;
                 else
-                    ConsecutivePositiveBalance = 0;                
+                    ConsecutivePositiveBalance = 0;
             }
         }
 
@@ -414,6 +416,8 @@ namespace P2PVideoStreaming
         private List<FileSection> _sectionsToInsert;
         private Dictionary<User, DownloadingFrom> _downloadSectionsInProgress;
         private List<double> _uploadList;
+
+        public Network Network {get; private set;}
         
         //private Dictionary<User, UploadingTo> _uploadSectionsInProgress;
     }

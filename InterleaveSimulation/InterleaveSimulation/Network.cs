@@ -8,11 +8,25 @@ namespace InterleaveSimulation
 {
     class Network
     {
-        public Network()
+        public Network(int contactListSize)
         {
             TimeSlot = 0;
             _nextServerSection = 0;
             _finished = false;
+
+            ContactListSize = contactListSize;
+        }
+
+        public void RunSimulation()
+        {
+            MakeUsers();
+            CreateContactLists();
+            CreateServer();
+
+            DistributeFile();
+
+            Console.Out.WriteLine("Finished");
+            Console.Out.WriteLine($"Final Time Slot: {TimeSlot}.");
         }
 
         public void MakeUsers()
@@ -124,7 +138,7 @@ namespace InterleaveSimulation
 
         public const int NumberOfUsers = 500;
         public const int NumberOfSections = 1000;
-        public const int ContactListSize = 3;
+        public int ContactListSize;
         public User[] Users { get; set; }
         public User Server { get; set; }
         public int TimeSlot { get; private set; }
